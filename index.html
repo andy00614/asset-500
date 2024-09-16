@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>动态标普500投资计算器</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .input-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+        input {
+            padding: 5px;
+            margin-top: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: white;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: right;
+        }
+        th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        #chart {
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+    <h1>动态标普500投资计算器</h1>
+    <div class="input-container">
+        <div class="input-group">
+            <label for="initialInvestment">初始投资（美元）:</label>
+            <input type="number" id="initialInvestment" value="100000">
+        </div>
+        <div class="input-group">
+            <label for="monthlyInvestment">每月定投（美元）:</label>
+            <input type="number" id="monthlyInvestment" value="4000">
+        </div>
+        <div class="input-group">
+            <label for="annualRate">年化收益率（%）:</label>
+            <input type="number" id="annualRate" value="10">
+        </div>
+        <div class="input-group">
+            <label for="years">投资年数:</label>
+            <input type="number" id="years" value="10">
+        </div>
+    </div>
+    <button onclick="updateCalculation()">计算</button>
+    <table id="investmentTable">
+        <tr>
+            <th>年份</th>
+            <th>年末余额</th>
+            <th>当年收益</th>
+        </tr>
+    </table>
+    <canvas id="chart"></canvas>
+
+    <script>
+        let myChart;
+
+        function calculateInvestment(initialInvestment, monthlyInvestment, annualRate, years) {
+            let balance = initialInvestment;
+            const results = [];
+            const monthlyRate = annualRate / 12 / 100;
+
+            for (let year = 1; year <= years; year++) {
+                let startBalance = balance;
+                for (let month = 1; month <= 12; month++) {
+                    balance += monthlyInvestment;
+                    balance *= (1 + monthlyRate);
+                }
+                let yearlyProfit = balance - startBalance - (monthlyInvestment * 12);
+                results.push({
+                    year: year,
+                    balance: balance,
+                    profit: yearlyProfit
+                });
+            }
+            return results;
+        }
+
+        function updateCalculation() {
+            const initialInvestment = parseFloat(document.getElementById('initialInvestment').value);
+            const monthlyInvestment = parseFloat(document.getElementById('monthlyInvestment').value);
+            const annualRate = parseFloat(document.getElementById('annualRate').value);
+            const years = parseInt(document.getElementById('years').value);
+
+            const results = calculateInvestment(initialInvestment, monthlyInvestment, annualRate, years);
+
+            const tableBody = document.getElementById('investmentTable');
+            // 清除旧的表格行，保留表头
+            while (tableBody.rows.length > 1) {
+                tableBody.deleteRow(1);
+            }
+
+            const labels = [];
+            const balanceData = [];
+
+            results.forEach(result => {
+                const row = tableBody.insertRow();
+                row.insertCell(0).textContent = result.year;
+                row.insertCell(1).textContent = result.balance.toFixed(2);
+                row.insertCell(2).textContent = result.profit.toFixed(2);
+
+                labels.push(`Year ${result.year}`);
+                balanceData.push(result.balance);
+            });
+
+            updateChart(labels, balanceData);
+        }
+
+        function updateChart(labels, balanceData) {
+            const ctx = document.getElementById('chart').getContext('2d');
+            
+            if (myChart) {
+                myChart.destroy();
+            }
+
+            myChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '年末余额',
+                        data: balanceData,
+                        borderColor: 'rgb(75, 192, 192)',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '余额 (USD)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 初始化页面时执行一次计算
+        updateCalculation();
+    </script>
+</body>
+</html>
